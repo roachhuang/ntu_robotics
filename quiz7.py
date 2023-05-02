@@ -5,14 +5,82 @@ import matplotlib.pyplot as plt
 import craig as cg
 import pieper as pp
 import plan_traj as pt
+from spatialmath import SE3
+import roboticstoolbox as rtb
+from roboticstoolbox import DHRobot, RevoluteMDH
+
 
 # SPACE = 'cartesion'
 SPACE = 'joint'
 # https://arduinogetstarted.com/faq/how-to-control-speed-of-servo-motor
 
+def pose2T(pose):
+    p = tuple(pose[:3])
+    phi, theta, psi = tuple(np.radians(pose[3:]))
+    eul = SE3.Rz(phi) * SE3.Ry(theta) * SE3.Rz(psi)
+    T = np.eye(4)   # identity matrix, placeholder
+    T[:3, :3] = eul.A[:3, :3]
+    T[:3, 3] = p
+    return SE3(T)
 
 def main():
     np.set_printoptions(suppress=True)
+
+    a = [0, -30, 340, -40, 0, 0]
+    d = [0, 0, 0, 338, 0, 0]
+    alp = [0, -np.pi/2, 0, -np.pi/2, np.pi/2, -np.pi/2]
+
+    qlim_deg = np.array([[-90, 90], [-90, 0], [-90, 0],[-180,180],[0,90],[-180,180]])
+    q = np.deg2rad(qlim_deg)
+
+    dh_params = [
+        RevoluteMDH(d=d[0], a=a[0], alpha=alp[0], qlim=q[0]),    # joint 1
+        RevoluteMDH(d=d[1], a=a[1], alpha=alp[1], qlim=q[1]),             # joint 2
+        RevoluteMDH(d=d[2], a=a[2], alpha=alp[2], qlim=q[2]),     # joint 3
+        RevoluteMDH(d=d[3], a=a[3], alpha=alp[3], qlim=q[3]),      # joint 4
+        RevoluteMDH(d=d[4], a=a[4], alpha=alp[4], qlim=q[4]),      # joint 5
+        RevoluteMDH(d=d[5], a=a[5], alpha=alp[5], qlim=q[5]),             # joint 6
+    ]
+
+    robot = DHRobot(dh_params, name='my_robot')
+    print('qlim', robot.qlim)
+   
+    print(robot)
+    p0 = [630, 364, 20,  0,  0, 0]
+    p1 = [630, 304, 220, 60, 0, 0]
+    p2 = [630, 220, 24, 180, 0, 0]
+
+    Tcup_6 = np.array([[0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 206], [0, 0, 0, 1]])
+    tc_0 = []
+    # pg 6, compute each point's tc_0 transformation matrix based on cartesion space. range: 0~totalPoints-1
+    tf = np.empty(shape=[4,4])  # p0 to pf
+    t6_0 = []
+
+    p = p2
+    tx, ty, tz = np.radians(p[3:6])
+        # combine rot and translation vector into transformation matrix
+    tf[:3, :3] = cg.Rot('x', tx) @ cg.Rot('y', ty) @ cg.Rot('z', tz)  # rotation matrix
+    tf[:3, 3] = p[0:3]  # x,y,z
+    tf[3, :] = [0, 0, 0, 1]
+    #tc_0.append(tf)
+        # get t6_0 for each point
+    t6_0 = tf @ np.linalg.inv(Tcup_6)    
+
+    # T=pose2T(p0)
+    print(t6_0)
+
+    # Set an initial guess
+    q0 = np.array([0, 0, 0, 90, 45, 90])    
+    sol = robot.ikine_LM(SE3(t6_0), q0=np.radians(q0))
+    degs = np.rad2deg(sol.q)    
+    print('sol:', np.round(degs))
+
+
+    ############## workspace ################################
+  
+
+    #########################################################
+
     dh_tbl = np.array([[0, 0, 0], [radians(-90), -30, 0], [0, 340, 0],
                        [radians(-90), -40, 338], [radians(90), 0, 0],
                        [radians(-90), 0, 0]])
@@ -35,7 +103,7 @@ def main():
                        [0, 0, 0, 1]])
     tc_0 = []
     # pg 6, compute each point's tc_0 transformation matrix based on cartesion space. range: 0~totalPoints-1
-    tf = np.empty(shape=[4, 4])  #p0 to pf
+    tf = np.empty(shape=[4, 4])  # p0 to pf
     t6_0 = []
     totalPoints, num_cols = p.shape
     segs = totalPoints - 1
@@ -63,7 +131,7 @@ def main():
             col_names = ['ti', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6']
             p[i, 1:7] = pp.pieper(t6_0)
             # fk_t6_0 = np.around(cg.fk_6axes(p[i, 1:7]), decimals=1) + 0.0
-            fk_t6_0=cg.fk_6axes(p[i, 1:7])
+            fk_t6_0 = cg.fk_6axes(p[i, 1:7])
             print(fk_t6_0)
             assert np.allclose(t6_0.astype('float'), fk_t6_0.astype('float'))
             # assert np.allclose(np.around(t6_0, decimals=1), fk_t6_0)
@@ -176,7 +244,7 @@ def main():
         plt.xlabel('Time')
         plt.plot(timeAxis, inputPoints[col], 'r')
         plt.grid()
-    #plt.show()
+    # plt.show()
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
@@ -186,6 +254,7 @@ def main():
               color='r',
               linestyle='dotted')
     plt.show()
+
 
 if __name__ == "__main__":
     main()
