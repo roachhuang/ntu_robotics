@@ -1,6 +1,6 @@
 import craig as cg
 import numpy as np
-from math import asin, acos, sin, cos, pi, atan2
+from math import asin, sin, cos, pi, atan2
 
 np.set_printoptions(precision=4, suppress=True)
 

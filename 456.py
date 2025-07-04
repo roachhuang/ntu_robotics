@@ -2,6 +2,8 @@ import numpy as np
 from math import pi
 from scipy.spatial.transform import Rotation as R
 
+from fk_zyz import dh_transform
+
 
 def euler_zyz(R):
     """

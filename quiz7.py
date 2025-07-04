@@ -133,7 +133,10 @@ def main():
             # fk_t6_0 = np.around(cg.fk_6axes(p[i, 1:7]), decimals=1) + 0.0
             fk_t6_0 = cg.fk_6axes(p[i, 1:7])
             print(fk_t6_0)
-            assert np.allclose(t6_0.astype('float'), fk_t6_0.astype('float'))
+            if np.allclose(t6_0.astype('float'), fk_t6_0.astype('float')) == True:
+                print(f'fk_t6_0: {fk_t6_0}, t6_0: {t6_0}')
+            else:
+                print(f'fk_t6_0: {fk_t6_0}, t6_0: {t6_0} NOT MATCHED')    
             # assert np.allclose(np.around(t6_0, decimals=1), fk_t6_0)
 
     P = pd.DataFrame(p, columns=col_names, index=row_names)

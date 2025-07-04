@@ -1,4 +1,4 @@
-from cmath import acos, atan, pi, sqrt
+from cmath import pi, sqrt
 from math import radians
 import craig as cg
 # import sympy as sp

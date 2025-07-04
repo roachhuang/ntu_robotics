@@ -1,5 +1,5 @@
 # quiz
-# from cmath import acos, atan, pi, sqrt
+# from cmath import np.arccos, atan, pi, sqrt
 from math import radians, pi, atan2
 import pieper as pp
 import craig as cg
@@ -15,6 +15,7 @@ init_printing(use_latex='mathjax')  # use pretty math output
 dh_tbl = np.array([[0, 0, 0], [radians(-90), -30, 0], [0, 340, 0],
                    [radians(-90), -40, 338], [radians(90), 0, 0],
                    [radians(-90), 0, 0]])
+
 cg.setDhTbl(dh_tbl)
 
 def quiz2():
@@ -31,17 +32,7 @@ def quiz2():
     print('t2_0:', t2_0)
 
 def quiz4_3():
-    d2 = np.sqrt(69.28**2 + 40**2)
-    '''
-    dh_tbl=np.array([[0,0,0],
-                    [radians(-90), -30, 0],
-                    [0, 340, 0],
-                    [radians(-90), -40, 338],
-                    [radians(90), 0, 0],
-                    [radians(-90),0,0]])
-
-    cg.setDhTbl(dh_tbl)
-    '''
+    d2 = np.sqrt(69.28**2 + 40**2)    
     #q1 = np.arctan2(40, 69.28)
     q1 = atan2(40, 69.28)
     print('q1:', q1 * 180 / pi)
@@ -98,15 +89,7 @@ def quiz4_5(tc_0):
     # sequence matters!!! think about it.
     tcup_0 = simplify(Td_0 @ tcup_d)
     print('tcup_0', tcup_0)
-    '''
-    dh_tbl=np.array([[0,0,0],
-                    [np.deg2rad(-90), 0, 0],
-                    [0, 2, 0.5],
-                    [np.deg2rad(-90), 0.1666, 2],
-                    [np.deg2rad(90), 0, 0],
-                    [np.deg2rad(90),0,0]])
-
-    '''
+    
     # t6_0=np.linalg.inv(t0_w) @ Tc_w @ np.linalg.inv(Tcup_6)
     # tc_0 = tc_6 @ t6_0 ->
     t6_0 = simplify(tc_0 @ np.linalg.inv(Tcup_6))
@@ -148,6 +131,7 @@ def quiz4_6(t6_0, q3):
 quiz4_3()
 tc_0 = quiz4_4()
 
+# call pieper to compute q1~6
 quiz4_5(tc_0)
 quiz2()
 '''

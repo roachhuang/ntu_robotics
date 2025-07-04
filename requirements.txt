@@ -1,0 +1,19 @@
+# sudo apt install python3-venv  # For Ubuntu/Debian
+
+# cd /path/to/cloned_repo
+# python3 -m venv myenv  # Creates a folder `myenv` with the isolated environment
+# source myenv/bin/activate  # Linux/macOS
+
+# run below installation after source myenv/bin/activate
+# pip3 install -r requirements.txt
+
+# deactivate  # Exit the environment
+# robotics-toolbox-python is not compatible with Python 3.12, so we pin it to <2.0.0
+numpy >=1.17.3, <2.0.0
+# scipy >= 1.6
+# pyserial >= 3.5
+spatialmath-python >= 1.1.14
+pandas >= 1.2.4
+matplotlib >= 3.3.4
+roboticstoolbox-python == 1.1.1
+sympy >= 1.8
