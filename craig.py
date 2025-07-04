@@ -130,30 +130,92 @@ def is_negative_number_digit(n: str) -> bool:
         return False
 
 
-def isfloat(num):
+def isfloat(num: str) -> bool:
+    """
+    Check if the input string can be converted to a float.
+
+    Parameters
+    ----------
+    num : str
+        Input string to check.
+
+    Returns
+    -------
+    bool
+        True if num can be converted to float, False otherwise.
+    """
     try:
         float(num)
         return True
     except ValueError:
         return False
 
-def fk_3axes(l1, l2, l3, q1, q2, q3):
+def fk_3axes(l1: float, l2: float, l3: float, q1: float, q2: float, q3: float) -> tuple[float, float]:
+    """
+    Forward kinematics for a 3-axis planar manipulator.
+
+    Parameters
+    ----------
+    l1, l2, l3 : float
+        Link lengths.
+    q1, q2, q3 : float
+        Joint angles in radians.
+
+    Returns
+    -------
+    tuple[float, float]
+        (x, y) position of the end effector.
+    """
     x = l1 * cos(q1) + l2 * cos(q1 + q2) + l3 * cos(q1 + q2 + q3)
     y = l1 * sin(q1) + l2 * sin(q1 + q2) + l3 * sin(q1 + q2 + q3)
     print(f'x, y: {x, y}')
     return (x, y)
 
-def fk_6axes(q):
-    m=[]
-    m= get_ti2i_1(1, q[0]) @ get_ti2i_1(2, q[1]) @ get_ti2i_1(
+def fk_6axes(q: list[float]) -> np.ndarray:
+    """
+    Forward kinematics for a 6-axis manipulator.
+
+    Parameters
+    ----------
+    q : list[float]
+        List of 6 joint angles in radians.
+
+    Returns
+    -------
+    np.ndarray
+        4x4 transformation matrix as a NumPy array (dtype float32).
+    """
+    m = get_ti2i_1(1, q[0]) @ get_ti2i_1(2, q[1]) @ get_ti2i_1(
         3, q[2]) @ get_ti2i_1(4, q[3]) @ get_ti2i_1(5, q[4]) @ get_ti2i_1(
             6, q[5])
     return np.array(m, dtype=np.float32)
 
 
-#l3=206
-# endEffector # tuple (x,y)
-def verify_ik(pc_0, l1, l2, l3, q1s, q2s, q3s):
+def verify_ik(
+    pc_0: tuple[float, float],
+    l1: float,
+    l2: float,
+    l3: float,
+    q1s: list[float],
+    q2s: list[float],
+    q3s: list[float],
+) -> None:
+    """
+    Verify inverse kinematics solutions for a 3-axis planar manipulator.
+
+    Parameters
+    ----------
+    pc_0 : tuple[float, float]
+        Desired end effector position (x, y).
+    l1, l2, l3 : float
+        Link lengths.
+    q1s, q2s, q3s : list[float]
+        Lists of candidate joint angles in radians.
+
+    Returns
+    -------
+    None
+    """
     endEffector = pc_0
     for q1 in q1s:
         for q2 in q2s:

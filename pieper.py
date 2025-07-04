@@ -22,24 +22,15 @@ import pandas as pd
 
 init_printing(use_unicode=True, use_latex="mathjax")
 
-def pieper(t0_6):
+def pieper(t0_6:np.ndarray) -> np.ndarray :
     '''analytical IK method'''  
-    np.set_printoptions(precision=4, suppress=True)
-    
-    # dh_params = np.array([[0, 0,     0,   -pi/2],
-    #                   [-90, - 30,    0,      0],
-    #                   [  0,  340,    0,   -pi/2],
-    #                   [-90,  -40,    338,   pi/2],
-    #                   [ 90,    0,    0,   -pi/2],
-    #                   [-90,    0,    0,     0]])
-    
+    np.set_printoptions(precision=4, suppress=True)    
     
     q1s = []
     q23s = []
     q123s = []
     q3s = []
-    # solved 3 axies in tuple
-    qs = []
+    q456s = []
     list_of_qs = []
 
     u, q1, q2, q3 = symbols("u,q1,q2,q3")
@@ -80,7 +71,7 @@ def pieper(t0_6):
     # print('g2:', g2)
     # print('g3:', g3)
     """
-    p4_0=[x,y,z,1] = t1_0@g = [c1g1-s1g2, s1g1+c1g2, g3, 1]
+    p4_0=[x,y,z,1] = t1_0@g = [c1g1-s1g2, s1g1+c1g2, g3, 1],
     x=p4_0orgx=c1g1-s1g2, y=s1g1+c1g2
     frame0 to wrist 的長度平方 so as to eliminate q1
     c1g1**2-s1g2**2+s1g1**2+c1g2**2+g3**2=> g1**2(c1**2+s1**2)+g2**2(s1**2+c1**2)+g3**2
@@ -192,10 +183,6 @@ def pieper(t0_6):
         t1 = atan2(cs[1], cs[0])
         q1s.append(t1)
 
-    # convert q1s to numpy array for lmt calculation
-    # q1s = np.array(q1s, dtype=np.float64)
-    # q1s_lmt = q1s[(q1s >= -pi/2) & (q1s <= pi/2)]
-    
     # one pair of q2,q3 returns one q1 only
     q123s = np.insert(q23s, 0, q1s, axis=1)
     mask_q1 = (q123s[:, 0] >= -pi/2) & (q123s[:, 0] <= pi/2)
@@ -220,43 +207,40 @@ def pieper(t0_6):
     expr_x = cos(q1) * g1 - sin(q1) * g2
     expr_y = sin(q1) * g1 + cos(q1) * g2
     expr_z = g3
-    # q123s=q123s.tolist()
+    
+    solutions = []
     for (t1,t2,t3) in q123s_lmt.reshape(-1, 3):
         myX = expr_x.subs([(q1, t1), (q2, t2), (q3, t3)])
         myY = expr_y.subs([(q1, t1), (q2, t2), (q3, t3)])
         myZ = expr_z.subs([(q2, t2), (q3, t3)])
         if isclose(myX, x) and isclose(myY, y) and isclose(myZ, z):
             print(
-                f"q1: {t1 * 180 / pi}, q2: {t2 * 180 / pi}, q3: {t3 * 180 / pi}"
+                f"q1: {np.degrees(t1)}, q2: {np.degrees(t2)}, q3: {np.degrees(t3)}"
             )
-            # qs.append((t1, t2, t3))
-            # q1-3=np.append(qs, [t1,t2,t3])
-            # qs array contains verified q1~q3
-            # qs = np.append(qs, [t1, t2, t3])
             q123 = np.array([t1, t2, t3], dtype=np.float64)
-            q123 = q123.reshape(1, -1)
+            # q123 = q123.reshape(1, -1)
             
-            q456 = ik.ik456(t0_6[0:3, 0:3], t1, t2, t3)
-            # q456 = ik.ik4_5_6(t0_6[0:3, 0:3], t1, t2, t3)
-            if q456.size > 0:
-                qs = np.concatenate((q123, q456))
-                list_of_qs = np.append(list_of_qs, qs)
+            q456s = ik.ik456(t0_6[0:3, 0:3], t1, t2, t3)
+            if q456s.size > 0:
+                for q456 in q456s:
+                    solutions.append(np.concatenate((q123, q456)))
             # get one verified q1-3 is enough
-            # print(f'q1-6: {np.rad2deg(qs)}')
-
-    list_of_qs = np.reshape(list_of_qs, (-1, 6))
+    
+    if not solutions:
+        print("No valid solutions found.")
+        return None 
+    
+    solutions = np.array(solutions, dtype=np.float64)
     # ver q1-q6 for all solutions
     col_names = ["q1", "q2", "q3", "q4", "q5", "q6"]
-    t0_6 = np.asarray(t0_6, dtype="float")
-    for ts in list_of_qs:
-        fk_t0_6 = cg.fk_6axes(ts)
+    t0_6 = np.asarray(t0_6, dtype="float64")
+    for q1_6 in solutions:
+        fk_t0_6 = cg.fk_6axes(q1_6)
         # print(fk_t0_6)
-        assert np.allclose(t0_6.astype("float"), fk_t0_6.astype("float"))
+        assert np.allclose(t0_6.astype("float64"), fk_t0_6.astype("float64"))
     print("FK6 all done!!!")
+    print("-----------SOLUTIONS---------------- ")
+    df = pd.DataFrame(solutions, columns=col_names)
+    print(np.degrees(df))
     print("------------------------------------ ")
-    solutions = pd.DataFrame(list_of_qs, columns=col_names)
-    print(np.rad2deg(solutions))
-    print("------------------------------------ ")
-    # return the 1st solution
-    return list_of_qs[0]
-    # return qs
+    return solutions[0]
