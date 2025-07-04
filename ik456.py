@@ -1,22 +1,51 @@
 """
-i have a robot arm. its craig dh table params are alpha0=0, alpha1=-90, aphha2=0, alpha3=-90, alpha4=90, alpha5=-90, a0=0,a1=-30, a2=340, a3=-40, a4=0, a5=0, d1=0,d2=0,d3=0,d4=338,d5=0,d6=0
-如何利用euler zyz 的公式去求一個4,5,6軸原點相交的機器手臂的4,5,6軸的角度.
+Inverse Kinematics for Robot Arm Joints 4, 5, 6 (Euler ZYZ Solution)
+====================================================================
+
+This module provides functions to solve the inverse kinematics (IK) for the last three joints (q4, 5, q6)
+of a 6-DOF robot arm using the Euler ZYZ convention. The robot's Denavit-Hartenberg (DH) parameters are
+assumed to be set in the `craig` module.
+
+References:
+-----------
+- UCLA IK notes: https://univ.deltamoocx.net/courses/course-v1:AT+AT_010_1102+2022_02_01/courseware/a3e573de127b85f1dcb23ea797cd253f/dc947a72e470ca516e9270c3bb4424e1/?child=first
+
+Note:
+-----
+- This implementation is tailored for a specific robot configuration and may not work for all robots (e.g., PUMA 650).
+- The code assumes the use of the `craig` module for DH transformations and the `spatialmath` library for SO3 rotations.
 """
 
-# aix 2&3 decide heigh of z and sqt(x**2+y**2)
-# q4,q5, q6
-# refer to must read UCLA ik.pdf for r3_6
-# https://univ.deltamoocx.net/courses/course-v1:AT+AT_010_1102+2022_02_01/courseware/a3e573de127b85f1dcb23ea797cd253f/dc947a72e470ca516e9270c3bb4424e1/?child=first
-
-# this ik456 doesn't work for puma650!!!
 from math import atan2, cos, sin, asin, sqrt, pi
 import numpy as np
 import craig as cg
 from sympy import symbols, simplify
 from spatialmath import SO3
+from typing import Sequence
 
 
-def ver456(r3_6, q4s, q5s, q6s):
+def ver456(
+    r3_6: np.ndarray,
+    q4s: Sequence[float],
+    q5s: Sequence[float],
+    q6s: Sequence[float],
+) -> np.ndarray:
+    """
+    Verify candidate solutions for q4, q5, q6 by comparing the computed rotation matrix
+    with the desired r3_6 matrix.
+
+    Parameters
+    ----------
+    r3_6 : np.ndarray
+        Desired 3x3 rotation matrix from frame 3 to 6.
+    q4s, q5s, q6s : Sequence[float]
+        Sequences of candidate joint angles (in radians) for joints 4, 5, 6.
+
+    Returns
+    -------
+    np.ndarray
+        Array of valid [q4, q5, q6] solutions (in radians), shape (N, 3).
+    """
     q456s = np.empty(shape=[0, 3], dtype=np.float64)
     for t4 in q4s:
         for t5 in q5s:
@@ -42,15 +71,31 @@ def ver456(r3_6, q4s, q5s, q6s):
                         f"verify: q4:{np.degrees(t4)}, q5:{np.degrees(t5)}, q6:{np.degrees(t6)}"
                     )
                     q456s = np.append(q456s, [t4, t5, t6])
-                    # return np.array([t4, t5, t6], dtype=np.float64)
-    # return 'no 456'
     return q456s.reshape(-1, 3)  # Reshape to ensure it's a 2D array with 3 columns
 
 
-# input: radian
-def ik456(r0_6, t1, t2, t3):
+def ik456(
+    r0_6: np.ndarray,
+    t1: float,
+    t2: float,
+    t3: float,
+) -> np.ndarray:
+    """
+    Compute possible solutions for joints 4, 5, 6 (q4, q5, q6) given the end-effector
+    rotation matrix and the first three joint angles.
 
-    # q456s = []
+    Parameters
+    ----------
+    r0_6 : np.ndarray
+        3x3 rotation matrix from base to end-effector.
+    t1, t2, t3 : float
+        Joint angles (in radians) for joints 1, 2, 3.
+
+    Returns
+    -------
+    np.ndarray
+        Array of valid [q4, q5, q6] solutions (in radians), shape (N, 3).
+    """
     q4s = []
     q5s = []
     q6s = []
@@ -90,25 +135,14 @@ def ik456(r0_6, t1, t2, t3):
         @ SO3.Rz(t3)
     )
 
-    # to align with zyz, we need to rotx(-90) wrt R3_4
+    # to align with zyz, we need to rotx(alp3) wrt R3_4 to start rot w/ z axis on joint 4.
     r0_3prime = r0_3 @ cg.Rot("x", alp3)
 
-    # r3_0=X(alp0)Z(t1)X(alp1)Z(t2)X(alp2)Z(t3)
-    # = X(0)Z(58.61)X(-90)Z(-64.46)X(0)Z(-11.98)
     r3_6 = r0_3.T @ r0_6
 
     # r3_6prime = np.linalg.inv(r0_3prime) @ r0_6
     r3_6prime = r0_3prime.T @ r0_6
 
-    # Elur angle zyz, NTU; however, puma560's axes 4,5,6 aint the same as ntu's.
-    # firstable rotate r4_3 in x axis to be in line w/ euler,
-    # b frame to a frame Rz'y'z'(alp,beta, gamma) = Rz'(alp)Ry'(beta)Rz'(gamma)
-    # rot('z', q4)@r6_4 =(r3_0@rot('x', alp3)).T @ r0_6
-    # rot('z', q4)@r6_4 = rot('z', q4)@r5_4(q5)@r6_5(q6)
-
-    # r3_6prime = r3_6
-    # print('r3_6prime:', r3_6prime)
-    # r3_6prime = r4_3primez'y'z'(alp, beta, gama)
     r13 = r3_6prime[0, 2]
     r23 = r3_6prime[1, 2]
     r31 = r3_6prime[2, 0]
@@ -157,7 +191,6 @@ def main():
         ]
     )
     cg.setDhTbl(dh_tbl)
-
     t123s = np.array(
         [
             [
