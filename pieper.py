@@ -163,9 +163,11 @@ def pieper(t0_6):
     # remove duplicates from the list
     # solve q2: r=(k1*c2+k2*s2)*2*a1+k3
     # q3s = [*set(q3s)]
-    for t3 in q3s:
+    q3s_lmt = q3s[(q3s >= -pi) & (q3s <= pi)]
+    for t3 in q3s_lmt:
         r_exp = rExpr.subs(q3, t3)
         tmp = solve(Eq(lExpr, r_exp), q2)
+        # tmp is a list of solutions for q2. filter it later for limitations!!!
         # one t3 has 2 answers for q2
         q23s.extend(tuple(zip(tmp, [t3, t3])))
 
@@ -190,15 +192,22 @@ def pieper(t0_6):
         t1 = atan2(cs[1], cs[0])
         q1s.append(t1)
 
+    # convert q1s to numpy array for lmt calculation
+    # q1s = np.array(q1s, dtype=np.float64)
+    # q1s_lmt = q1s[(q1s >= -pi/2) & (q1s <= pi/2)]
+    
     # one pair of q2,q3 returns one q1 only
     q123s = np.insert(q23s, 0, q1s, axis=1)
-    mask = ~np.all((q123s[:, 0] >= -pi) & (q123s[:, 0] <= pi), axis=0)
-    q123s=q123s[mask]
+    mask_q1 = (q123s[:, 0] >= -pi/2) & (q123s[:, 0] <= pi/2)
+    mask_q2 = (q123s[:, 1] >= -pi) & (q123s[:, 1] <= pi)
+    mask_q3 = (q123s[:, 2] >= -pi) & (q123s[:, 2] <= pi)    
+    mask = mask_q1 & mask_q2 & mask_q3
+    q123s_lmt=q123s[mask]
     
     # q1 = [-90, 90], constrain q1 btw -90 and 90
     # q123s = np.delete(q123s, np.where((q123s[:,0]<-1.57)|(q123s[:,0]>1.57))[0], axis=0)
     
-    print(f"q1-3: {np.rad2deg(q123s)}")
+    print(f"q1-3: {np.rad2deg(q123s_lmt)}")
     # q1s = [*set(q1s)]
 
     # q1 is simply atan2(y,x) according to ntu
@@ -211,24 +220,27 @@ def pieper(t0_6):
     expr_x = cos(q1) * g1 - sin(q1) * g2
     expr_y = sin(q1) * g1 + cos(q1) * g2
     expr_z = g3
-    for t123 in q123s:
-        myX = expr_x.subs([(q1, t123[0]), (q2, t123[1]), (q3, t123[2])])
-        myY = expr_y.subs([(q1, t123[0]), (q2, t123[1]), (q3, t123[2])])
-        myZ = expr_z.subs([(q2, t123[1]), (q3, t123[2])])
+    # q123s=q123s.tolist()
+    for (t1,t2,t3) in q123s_lmt.reshape(-1, 3):
+        myX = expr_x.subs([(q1, t1), (q2, t2), (q3, t3)])
+        myY = expr_y.subs([(q1, t1), (q2, t2), (q3, t3)])
+        myZ = expr_z.subs([(q2, t2), (q3, t3)])
         if isclose(myX, x) and isclose(myY, y) and isclose(myZ, z):
             print(
-                f"q1: {t123[0] * 180 / pi}, q2: {t123[1] * 180 / pi}, q3: {t123[2] * 180 / pi}"
+                f"q1: {t1 * 180 / pi}, q2: {t2 * 180 / pi}, q3: {t3 * 180 / pi}"
             )
             # qs.append((t1, t2, t3))
             # q1-3=np.append(qs, [t1,t2,t3])
             # qs array contains verified q1~q3
             # qs = np.append(qs, [t1, t2, t3])
-            q123 = np.array([t123[0], t123[1], t123[2]], dtype=np.float64)
-
-            q456 = ik.ik456(t0_6[0:3, 0:3], t123[0], t123[1], t123[2])
+            q123 = np.array([t1, t2, t3], dtype=np.float64)
+            q123 = q123.reshape(1, -1)
+            
+            q456 = ik.ik456(t0_6[0:3, 0:3], t1, t2, t3)
             # q456 = ik.ik4_5_6(t0_6[0:3, 0:3], t1, t2, t3)
-            qs = np.concatenate((q123, q456))
-            list_of_qs = np.append(list_of_qs, qs)
+            if q456.size > 0:
+                qs = np.concatenate((q123, q456))
+                list_of_qs = np.append(list_of_qs, qs)
             # get one verified q1-3 is enough
             # print(f'q1-6: {np.rad2deg(qs)}')
 

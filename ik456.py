@@ -126,14 +126,14 @@ def ik456(r0_6, t1, t2, t3):
     # map zyz euler angles to dh angles
     q4s = np.append(q4s, [alp1 + pi, alp2 + pi])
     q4s = np.append(q4s, [alp1 - pi, alp2 - pi])
-    q4s_lmt = q4s[(q4s >= -pi) & (q4s <= pi)]
+    q4s_lmt = q4s[(q4s >= -pi/2) & (q4s <= pi/2)]
 
     q5s = np.append(q5s, [beta1, beta2])
     q5s_lmt = q5s[(q5s >= -pi / 2) & (q5s <= pi / 2)]
 
     q6s = np.append(q6s, [gamma1 + pi, gamma2 + pi])
     q6s = np.append(q6s, [gamma1 - pi, gamma2 - pi])
-    q6s_lmt = q6s[(q6s >= -pi) & (q6s <= pi)]
+    q6s_lmt = q6s[(q6s >= -pi/2) & (q6s <= pi/2)]
 
     # q456s=np.row_stack((ans1, ans2))
 
@@ -144,7 +144,7 @@ def ik456(r0_6, t1, t2, t3):
 
 
 def main():
-    # ppt's dh table, not quiz dh table. make sure to comment out for quiz
+    # this is not ans to quiz. it is for ppt.   
     # pose = (227,372,188.6, 0, -30, 180) on ppt
     dh_tbl = np.array(
         [
